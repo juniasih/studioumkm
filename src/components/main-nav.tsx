@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/icons";
+import { useAuth } from "@/firebase";
+import { initiateSignOut } from "@/firebase/non-blocking-login";
+import { Button } from "./ui/button";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -23,6 +26,15 @@ const navItems = [
 
 export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    initiateSignOut(auth).then(() => {
+      router.push('/login');
+    });
+  };
+
 
   return (
     <nav className={cn("flex flex-col h-full", className)}>
@@ -51,13 +63,14 @@ export function MainNav({ className }: { className?: string }) {
         </div>
       </div>
       <div className="mt-auto p-4 border-t border-border/50">
-        <Link
-          href="/login"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-foreground hover:bg-accent"
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="flex w-full justify-start items-center gap-3 rounded-lg px-3 py-2 text-foreground/80 transition-all hover:text-foreground hover:bg-accent"
         >
           <LogOut className="h-4 w-4" />
           Keluar
-        </Link>
+        </Button>
       </div>
     </nav>
   );
