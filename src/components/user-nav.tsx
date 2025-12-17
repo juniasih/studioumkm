@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { useAuth, useFirebase, useUser } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { initiateSignOut } from '@/firebase/non-blocking-login';
 import { useRouter } from 'next/navigation';
 import { useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -25,7 +25,7 @@ export function UserNav() {
   const { firestore } = useFirebase();
 
   const handleLogout = () => {
-    signOut(auth).then(() => {
+    initiateSignOut(auth).then(() => {
       router.push('/login');
     });
   };

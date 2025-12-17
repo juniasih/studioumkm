@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
 import { useUser } from '@/firebase';
+import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -33,13 +34,29 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    initiateEmailSignIn(auth, email, password);
-    toast({
-      title: 'Mencoba Masuk...',
-      description: 'Silakan tunggu sebentar.',
-    });
+    try {
+      await initiateEmailSignIn(auth, email, password);
+      toast({
+        title: 'Mencoba Masuk...',
+        description: 'Silakan tunggu sebentar.',
+      });
+    } catch (error) {
+      if (error instanceof FirebaseError && error.code === 'auth/invalid-credential') {
+        toast({
+          variant: 'destructive',
+          title: 'Login Gagal',
+          description: 'Email atau password yang Anda masukkan salah.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Oh tidak! Terjadi kesalahan.',
+          description: 'Tidak dapat masuk. Silakan coba lagi nanti.',
+        });
+      }
+    }
   };
 
   if (isUserLoading || user) {
