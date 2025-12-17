@@ -30,18 +30,52 @@ import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useFirebase } from "@/firebase";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection } from 'firebase/firestore';
+import { useRouter } from "next/navigation";
+
 
 export default function NewExpensePage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [amount, setAmount] = useState<number | string>('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
+  const router = useRouter();
+
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+      return;
+    }
+    if (!category) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Silakan pilih kategori.' });
+        return;
+    }
+
+    const expenseData = {
+        umkmId: 'main',
+        date: date?.toISOString() || new Date().toISOString(),
+        amount: Number(amount),
+        description,
+        category,
+        type: 'expense'
+    };
+    
+    const collectionRef = collection(firestore, `users/${user.uid}/umkm_profiles/main/transactions`);
+    addDocumentNonBlocking(collectionRef, expenseData);
+
     toast({
       title: "Sukses!",
       description: "Pencatatan pengeluaran baru berhasil disimpan.",
       className: "bg-green-100 text-green-800 border-green-200",
     });
+    router.push('/transactions');
   };
 
   return (
@@ -67,7 +101,7 @@ export default function NewExpensePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="amount">Jumlah (IDR)</Label>
-              <Input id="amount" type="number" placeholder="150000" required />
+              <Input id="amount" type="number" placeholder="150000" required value={amount} onChange={e => setAmount(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="date">Tanggal Transaksi</Label>
@@ -100,20 +134,22 @@ export default function NewExpensePage() {
             <Textarea
               id="description"
               placeholder="Contoh: Pembelian 5kg Biji Kopi Robusta"
+              value={description} 
+              onChange={e => setDescription(e.target.value)}
             />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="category">Kategori</Label>
-            <Select>
+            <Select onValueChange={setCategory} value={category}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih kategori pengeluaran" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bahan-baku">Bahan Baku</SelectItem>
-                <SelectItem value="gaji">Gaji Karyawan</SelectItem>
-                <SelectItem value="operasional">Operasional (Listrik, Air)</SelectItem>
-                <SelectItem value="pemasaran">Pemasaran</SelectItem>
-                <SelectItem value="lainnya">Lainnya</SelectItem>
+                <SelectItem value="Bahan Baku">Bahan Baku</SelectItem>
+                <SelectItem value="Gaji Karyawan">Gaji Karyawan</SelectItem>
+                <SelectItem value="Operasional">Operasional (Listrik, Air)</SelectItem>
+                <SelectItem value="Pemasaran">Pemasaran</SelectItem>
+                <SelectItem value="Lainnya">Lainnya</SelectItem>
               </SelectContent>
             </Select>
           </div>

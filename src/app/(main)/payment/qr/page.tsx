@@ -1,12 +1,31 @@
+'use client';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { umkmProfile } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Download, Share2 } from 'lucide-react';
+import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { UmkmProfile } from '@/lib/data';
 
 export default function QrPaymentPage() {
   const qrImage = PlaceHolderImages.find(img => img.id === 'qr-code');
+  const { firestore, user } = useFirebase();
+
+  const umkmProfileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, `users/${user.uid}/umkm_profiles/main`);
+  }, [firestore, user]);
+
+  const { data: umkmProfile, isLoading } = useDoc<UmkmProfile>(umkmProfileRef);
+
+  if (isLoading) {
+    return <div>Loading QR Code...</div>
+  }
+
+  if (!umkmProfile) {
+    return <div>Profil UMKM tidak ditemukan. Silakan lengkapi profil Anda.</div>;
+  }
 
   return (
     <div className="flex flex-col gap-4 items-center">
@@ -31,7 +50,7 @@ export default function QrPaymentPage() {
           </div>
           <div className="text-center">
             <h2 className="text-xl font-bold font-headline">{umkmProfile.name}</h2>
-            <p className="text-muted-foreground">{umkmProfile.owner}</p>
+            <p className="text-muted-foreground">{user?.displayName || user?.email}</p>
           </div>
         </CardContent>
       </Card>

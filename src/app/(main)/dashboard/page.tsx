@@ -23,7 +23,6 @@ import {
   Plus,
   Minus
 } from "lucide-react";
-import { transactions } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -34,6 +33,10 @@ import {
   ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import type { Transaction } from '@/lib/data';
+
 
 const chartData = [
   { month: "Jan", income: 186, expense: 80 },
@@ -56,9 +59,37 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function DashboardPage() {
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const { firestore, user } = useFirebase();
+  
+  const transactionsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, `users/${user.uid}/umkm_profiles/main/transactions`),
+      orderBy('date', 'desc')
+    );
+  }, [firestore, user]);
+
+  const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+
+  const recentTransactionsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, `users/${user.uid}/umkm_profiles/main/transactions`),
+      orderBy('date', 'desc'),
+      limit(5)
+    );
+  }, [firestore, user]);
+
+  const { data: recentTransactions } = useCollection<Transaction>(recentTransactionsQuery);
+
+
+  const totalIncome = transactions?.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0) || 0;
+  const totalExpense = transactions?.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0) || 0;
   const netProfit = totalIncome - totalExpense;
+
+  if (isLoading) {
+    return <div>Loading dashboard...</div>
+  }
 
   return (
     <>
@@ -116,7 +147,7 @@ export default function DashboardPage() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{transactions.length}</div>
+            <div className="text-2xl font-bold">{transactions?.length || 0}</div>
             <p className="text-xs text-muted-foreground">Bulan ini</p>
           </CardContent>
         </Card>
@@ -180,7 +211,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.slice(0, 5).map((transaction) => (
+                {recentTransactions?.map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell>
                       <div className="font-medium">{transaction.description}</div>

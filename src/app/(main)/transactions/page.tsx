@@ -1,9 +1,7 @@
+'use client';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -14,11 +12,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { transactions, Transaction } from "@/lib/data";
+import type { Transaction } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Plus, Minus } from 'lucide-react';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+
 
 const TransactionRow = ({ transaction }: { transaction: Transaction }) => (
   <TableRow>
@@ -71,8 +72,24 @@ const TransactionTable = ({ transactions }: { transactions: Transaction[] }) => 
 );
 
 export default function TransactionsPage() {
-  const incomeTransactions = transactions.filter((t) => t.type === "income");
-  const expenseTransactions = transactions.filter((t) => t.type === "expense");
+    const { firestore, user } = useFirebase();
+
+    const transactionsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(
+        collection(firestore, `users/${user.uid}/umkm_profiles/main/transactions`),
+        orderBy('date', 'desc')
+        );
+    }, [firestore, user]);
+
+    const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+
+  const incomeTransactions = transactions?.filter((t) => t.type === "income") || [];
+  const expenseTransactions = transactions?.filter((t) => t.type === "expense") || [];
+  
+  if (isLoading) {
+      return <div>Loading transactions...</div>
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,7 +111,7 @@ export default function TransactionsPage() {
           <TabsTrigger value="expense">Pengeluaran</TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <TransactionTable transactions={transactions} />
+          <TransactionTable transactions={transactions || []} />
         </TabsContent>
         <TabsContent value="income">
           <TransactionTable transactions={incomeTransactions} />
