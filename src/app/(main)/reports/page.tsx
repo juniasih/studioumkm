@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -14,8 +16,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Line, LineChart } from "recharts";
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
-import { monthlyReportData, dailyReportData, transactions } from "@/lib/data";
-
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import type { Transaction } from '@/lib/data';
+import { useMemo } from "react";
+import { format, eachDayOfInterval, startOfWeek, endOfWeek, getMonth, getYear, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { id as localeID } from 'date-fns/locale';
 
 const chartConfig: ChartConfig = {
   income: {
@@ -29,9 +35,68 @@ const chartConfig: ChartConfig = {
 };
 
 export default function ReportsPage() {
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-    const netProfit = totalIncome - totalExpense;
+  const { firestore, user } = useFirebase();
+
+  const transactionsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, `users/${user.uid}/umkm_profiles/main/transactions`),
+      orderBy('date', 'desc')
+    );
+  }, [firestore, user]);
+
+  const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
+
+  const totalIncome = transactions?.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0) || 0;
+  const totalExpense = transactions?.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0) || 0;
+  const netProfit = totalIncome - totalExpense;
+
+  const monthlyReportData = useMemo(() => {
+    const last6Months = eachMonthOfInterval({
+      start: subMonths(new Date(), 5),
+      end: new Date(),
+    });
+
+    return last6Months.map(month => {
+      const monthStr = format(month, 'MMM', { locale: localeID });
+      const monthYear = getYear(month);
+      
+      const income = transactions
+        ?.filter(t => t.type === 'income' && getMonth(new Date(t.date)) === getMonth(month) && getYear(new Date(t.date)) === monthYear)
+        .reduce((acc, t) => acc + t.amount, 0) || 0;
+        
+      const expense = transactions
+        ?.filter(t => t.type === 'expense' && getMonth(new Date(t.date)) === getMonth(month) && getYear(new Date(t.date)) === monthYear)
+        .reduce((acc, t) => acc + t.amount, 0) || 0;
+
+      return { month: monthStr, income, expense };
+    });
+  }, [transactions]);
+  
+  const dailyReportData = useMemo(() => {
+    const today = new Date();
+    const startOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+    const endOfThisWeek = endOfWeek(today, { weekStartsOn: 1 });
+    const daysInWeek = eachDayOfInterval({ start: startOfThisWeek, end: endOfThisWeek });
+
+    return daysInWeek.map(day => {
+      const dayStr = format(day, 'EEE', { locale: localeID });
+
+      const income = transactions
+        ?.filter(t => t.type === 'income' && format(new Date(t.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
+        .reduce((acc, t) => acc + t.amount, 0) || 0;
+
+      const expense = transactions
+        ?.filter(t => t.type === 'expense' && format(new Date(t.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
+        .reduce((acc, t) => acc + t.amount, 0) || 0;
+
+      return { day: dayStr, income, expense };
+    });
+  }, [transactions]);
+
+  if (isLoading) {
+    return <div>Loading reports...</div>;
+  }
 
   return (
     <div className="flex flex-col gap-4">
