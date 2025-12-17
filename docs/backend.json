@@ -1,0 +1,392 @@
+{
+  "entities": {
+    "UmkmProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UmkmProfile",
+      "type": "object",
+      "description": "Represents the profile of a UMKM (Micro, Small, and Medium Enterprise).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UMKM profile."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 UMKM Profile)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the UMKM."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the UMKM's activities or products."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the UMKM."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "Contact number of the UMKM."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the UMKM.",
+          "format": "email"
+        },
+        "website": {
+          "type": "string",
+          "description": "Website URL of the UMKM.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name"
+      ]
+    },
+    "Income": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Income",
+      "type": "object",
+      "description": "Represents an income transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the income transaction."
+        },
+        "umkmId": {
+          "type": "string",
+          "description": "Reference to UMKM Profile. (Relationship: UMKM Profile 1:N Income)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the income transaction.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the income."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the income source."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method used for the income (e.g., cash, bank transfer)."
+        },
+        "paymentProofUrl": {
+          "type": "string",
+          "description": "URL of the payment proof document, if available."
+        }
+      },
+      "required": [
+        "id",
+        "umkmId",
+        "date",
+        "amount"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents an expense transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the expense transaction."
+        },
+        "umkmId": {
+          "type": "string",
+          "description": "Reference to UMKM Profile. (Relationship: UMKM Profile 1:N Expense)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the expense transaction.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the expense."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the expense (e.g., rent, supplies)."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method used for the expense."
+        },
+        "paymentProofUrl": {
+          "type": "string",
+          "description": "URL of the payment proof document, if available."
+        }
+      },
+      "required": [
+        "id",
+        "umkmId",
+        "date",
+        "amount",
+        "category"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction, encompassing both income and expenses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the transaction."
+        },
+        "umkmId": {
+          "type": "string",
+          "description": "Reference to UMKM Profile. (Relationship: UMKM Profile 1:N Transaction)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date and time of the transaction.",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of transaction: 'income' or 'expense'."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the transaction."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the transaction."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "References to ExpenseCategory. (Relationship: ExpenseCategory 1:N Transaction). Only applicable for expense transactions"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method of payment used for the transaction."
+        },
+        "paymentProofUrl": {
+          "type": "string",
+          "description": "URL of the payment proof document, if available."
+        }
+      },
+      "required": [
+        "id",
+        "umkmId",
+        "date",
+        "type",
+        "amount"
+      ]
+    },
+    "ExpenseCategory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExpenseCategory",
+      "type": "object",
+      "description": "Categorizes types of expenses, allowing for better tracking and reporting.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the expense category."
+        },
+        "umkmId": {
+          "type": "string",
+          "description": "Reference to UMKM Profile. (Relationship: UMKM Profile 1:N ExpenseCategory)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the expense category (e.g., 'Rent', 'Utilities', 'Marketing')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of what this expense category includes."
+        }
+      },
+      "required": [
+        "id",
+        "umkmId",
+        "name"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.  Serves as the username.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. User data is private; only the authenticated user can access their own profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, corresponding to their Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/umkm_profiles/{umkmProfileId}",
+        "definition": {
+          "entityName": "UmkmProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UmkmProfile"
+          },
+          "description": "Stores UMKM profiles associated with a user. Includes the userId to allow access control to the UMKM profile. A user has 1:1 relationship with an UMKM Profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the UMKM profile."
+            },
+            {
+              "name": "umkmProfileId",
+              "description": "The unique identifier of the UMKM profile."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/umkm_profiles/{umkmProfileId}/incomes/{incomeId}",
+        "definition": {
+          "entityName": "Income",
+          "schema": {
+            "$ref": "#/backend/entities/Income"
+          },
+          "description": "Stores income transactions associated with an UMKM profile.  A UMKM Profile has 1:N relationship with Income.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the UMKM profile."
+            },
+            {
+              "name": "umkmProfileId",
+              "description": "The unique identifier of the UMKM profile to which the income belongs."
+            },
+            {
+              "name": "incomeId",
+              "description": "The unique identifier of the income transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/umkm_profiles/{umkmProfileId}/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Stores expense transactions associated with an UMKM profile.  A UMKM Profile has 1:N relationship with Expense.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the UMKM profile."
+            },
+            {
+              "name": "umkmProfileId",
+              "description": "The unique identifier of the UMKM profile to which the expense belongs."
+            },
+            {
+              "name": "expenseId",
+              "description": "The unique identifier of the expense transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/umkm_profiles/{umkmProfileId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores transaction records (both income and expenses) associated with an UMKM profile.  A UMKM Profile has 1:N relationship with Transaction.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the UMKM profile."
+            },
+            {
+              "name": "umkmProfileId",
+              "description": "The unique identifier of the UMKM profile to which the transaction belongs."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier of the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/umkm_profiles/{umkmProfileId}/expense_categories/{expenseCategoryId}",
+        "definition": {
+          "entityName": "ExpenseCategory",
+          "schema": {
+            "$ref": "#/backend/entities/ExpenseCategory"
+          },
+          "description": "Stores expense categories associated with an UMKM profile. A UMKM Profile has 1:N relationship with ExpenseCategory.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the UMKM profile."
+            },
+            {
+              "name": "umkmProfileId",
+              "description": "The unique identifier of the UMKM profile to which the expense category belongs."
+            },
+            {
+              "name": "expenseCategoryId",
+              "description": "The unique identifier of the expense category."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the UMKM Track application's core features, focusing on financial record-keeping and digital payment management for UMKM businesses. The structure is optimized for secure access, scalability, and ease of debugging, adhering to the principles of Authorization Independence, Structural Segregation, Access Modeling, and Data Clarity.\n\n**Authorization Independence:**\n*   We achieve authorization independence primarily through path-based ownership. The `UmkmProfile` is created under the `/users/{userId}/umkm_profiles/{umkmProfileId}` path, granting the user direct ownership and control. All subsequent financial data (Incomes, Expenses, Transactions, ExpenseCategories) for an UMKM are stored as subcollections under the UMKM profile document (e.g., `/users/{userId}/umkm_profiles/{umkmProfileId}/incomes/{incomeId}`). This eliminates the need for `get()` calls in security rules to verify UMKM ownership, simplifying rule logic and ensuring atomic operations.\n\n**Structural Segregation:**\n*   Each collection serves a specific purpose (UMKM profiles, incomes, expenses, etc.), and is isolated under the user who owns them. This structural segregation ensures that security rules can be applied consistently to all documents within a collection, simplifying security management and preventing unintended data exposure.\n\n**Access Modeling:**\n*   The structure follows a hierarchical path-based ownership model. User-owned data is nested under the `/users/{userId}` path. UMKM profiles are directly linked to users, and all financial transactions related to a UMKM are nested under its profile. This model simplifies security rules by leveraging the path structure to enforce ownership. For example, only the user with the matching `userId` in the path `/users/{userId}/umkm_profiles/{umkmProfileId}` can access or modify the UMKM profile data.\n\n**QAPs (Rules are not Filters):**\n*   The structure supports secure `list` operations by storing all UMKM data under the user's path. This allows security rules to efficiently filter list operations based on the authenticated user's ID, ensuring that users can only access their own data. Each UMKM profile is associated with one user (1:1 relationship). Incomes, Expenses, Transactions, and Expense Categories are stored under the UMKM Profile Document (1:N relationship). This allows for performing secure `list` operations, by only fetching the documents within the authorized user and UMKM profiles.\n\nThis design avoids hierarchical authorization dependencies, makes authorization intent explicit, uses DBAC (Database Auth Based Control) with `request.auth.uid`, supports QAPs (Rules are not Filters), and maintains invariants for ownership, timestamps, and denormalized data."
+  }
+}

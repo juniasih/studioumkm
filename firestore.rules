@@ -1,0 +1,208 @@
+/**
+ * This ruleset enforces a strict, hierarchical user-ownership model for a
+ * financial tracking application for Micro, Small, and Medium Enterprises (UMKM).
+ *
+ * Core Philosophy:
+ * All data is considered private and is owned by a specific user. There is no
+ * public or shared data. Access to any resource is granted only to the
+ * authenticated user who owns that resource.
+ *
+ * Data Structure:
+ * The data is organized hierarchically to reflect ownership. All data, including
+ * UMKM profiles and their associated financial records (incomes, expenses, etc.),
+ * is nested under the path `/users/{userId}`. This path-based ownership is the
+ * primary mechanism for securing data, making rules simple, fast, and performant.
+ *
+ * Key Security Decisions:
+ * - DENY by default: No access is granted unless explicitly allowed.
+ * - Strict Ownership: A user can only access documents within their own
+ *   `/users/{userId}` data tree. Cross-user access is impossible.
+ * - No User Listing: It is forbidden to query the top-level `/users` collection
+ *   to protect user privacy.
+ * - Relational Integrity: On creation, rules validate that internal ID fields
+ *   (e.g., `userId`, `umkmId`) match the IDs in the document path. These fields are
+ *   enforced as immutable on update to prevent re-associating documents.
+ *
+ * Denormalization for Authorization:
+ * This ruleset relies on a path-based ownership model, which is the most efficient
+ * form of denormalization for authorization. The user's UID is part of every
+ * document path, eliminating the need for slow and costly `get()` calls to check
+ * parent documents for ownership. For example, a rule on an `income` document
+ * at `/users/USER_A/umkm_profiles/UMKM_1/incomes/INC_123` can instantly verify
+ * ownership by checking if the authenticated user's UID matches `USER_A` from
+ * the path.
+ *
+ * Structural Segregation:
+ * Each data type (e.g., `incomes`, `expenses`, `transactions`) is stored in its
+ * own dedicated subcollection. This clear separation simplifies rule logic and
+ * ensures that security constraints are applied consistently across similar
+ * types of documents.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //-------------------------------------------------------------------------
+    // Helper Functions
+    //-------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing document and path ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update and delete
+     * operations to prevent acting on non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates that a new User document contains an `id` field matching the user's UID.
+     */
+    function hasValidUserDataOnCreate(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * Enforces immutability of the User document's `id` field during updates.
+     */
+    function isUserDataImmutableOnUpdate() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that a new UmkmProfile links back to the correct owner user.
+     */
+    function hasValidUmkmProfileDataOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * Enforces immutability of the UmkmProfile's `userId` field during updates.
+     */
+    function isUmkmProfileDataImmutableOnUpdate() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+    
+    /**
+     * Validates that a new financial record (e.g., Income) links back to the correct parent UMKM profile.
+     */
+    function hasValidFinancialRecordDataOnCreate(umkmProfileId) {
+      return request.resource.data.umkmId == umkmProfileId;
+    }
+
+    /**
+     * Enforces immutability of a financial record's `umkmId` field during updates.
+     */
+    function isFinancialRecordDataImmutableOnUpdate() {
+      return request.resource.data.umkmId == resource.data.umkmId;
+    }
+
+    //-------------------------------------------------------------------------
+    // Collection Rules
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) A new user creating their own user document for the first time.
+     * @deny (list) An authenticated user trying to list all other users in the app.
+     * @principle Restricts access to a user's own data tree and allows self-creation of a profile.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && hasValidUserDataOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to UMKM profiles owned by a user.
+     * @path /users/{userId}/umkm_profiles/{umkmProfileId}
+     * @allow (create) An authenticated user creating a new UMKM profile for themselves.
+     * @deny (update) An authenticated user trying to modify an UMKM profile owned by another user.
+     * @principle Enforces document ownership for all operations within a user-specific subcollection.
+     */
+    match /users/{userId}/umkm_profiles/{umkmProfileId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidUmkmProfileDataOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUmkmProfileDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to income transactions for a specific UMKM profile.
+     * @path /users/{userId}/umkm_profiles/{umkmProfileId}/incomes/{incomeId}
+     * @allow (list) An authenticated user listing all income records for their own UMKM profile.
+     * @deny (create) An authenticated user trying to create an income record under another user's UMKM profile.
+     * @principle Validates relational integrity by ensuring the `umkmId` in the data matches the path.
+     */
+    match /users/{userId}/umkm_profiles/{umkmProfileId}/incomes/{incomeId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidFinancialRecordDataOnCreate(umkmProfileId);
+      allow update: if isExistingOwner(userId) && isFinancialRecordDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to expense transactions for a specific UMKM profile.
+     * @path /users/{userId}/umkm_profiles/{umkmProfileId}/expenses/{expenseId}
+     * @allow (delete) An authenticated user deleting an expense record from their own UMKM profile.
+     * @deny (get) An authenticated user trying to read a single expense record from another user's account.
+     * @principle Validates relational integrity by ensuring the `umkmId` in the data matches the path.
+     */
+    match /users/{userId}/umkm_profiles/{umkmProfileId}/expenses/{expenseId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidFinancialRecordDataOnCreate(umkmProfileId);
+      allow update: if isExistingOwner(userId) && isFinancialRecordDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Controls access to all financial transactions for a specific UMKM profile.
+     * @path /users/{userId}/umkm_profiles/{umkmProfileId}/transactions/{transactionId}
+     * @allow (create) An authenticated user creating a new transaction record for their own UMKM profile.
+     * @deny (update) An authenticated user trying to change the `umkmId` on an existing transaction.
+     * @principle Validates relational integrity by ensuring the `umkmId` in the data matches the path.
+     */
+    match /users/{userId}/umkm_profiles/{umkmProfileId}/transactions/{transactionId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidFinancialRecordDataOnCreate(umkmProfileId);
+      allow update: if isExistingOwner(userId) && isFinancialRecordDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to expense categories for a specific UMKM profile.
+     * @path /users/{userId}/umkm_profiles/{umkmProfileId}/expense_categories/{expenseCategoryId}
+     * @allow (list) An authenticated user listing all expense categories for their own UMKM profile.
+     * @deny (delete) An authenticated user trying to delete an expense category from another user's UMKM profile.
+     * @principle Validates relational integrity by ensuring the `umkmId` in the data matches the path.
+     */
+    match /users/{userId}/umkm_profiles/{umkmProfileId}/expense_categories/{expenseCategoryId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidFinancialRecordDataOnCreate(umkmProfileId);
+      allow update: if isExistingOwner(userId) && isFinancialRecordDataImmutableOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
