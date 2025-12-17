@@ -128,5 +128,60 @@ export default function RegisterPage() {
                 placeholder="Andi Pratama"
                 required
                 value={name}
-                onChange={(e) => setName(e.targe
-    
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="nama@contoh.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              Daftar dengan Email
+            </Button>
+          </div>
+        </form>
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">
+              Atau lanjutkan dengan
+            </span>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleGoogleRegister}
+        >
+          <GoogleIcon className="mr-2 h-5 w-5" />
+          Daftar dengan Google
+        </Button>
+        <div className="mt-4 text-center text-sm">
+          Sudah punya akun?{' '}
+          <Link href="/login" className="underline">
+            Masuk
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
